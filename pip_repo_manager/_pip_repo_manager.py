@@ -16,7 +16,7 @@ class PipRepoManager( object ):
                 containing all necessary wheel links.
         """
 
-        self._root_directory = root_directory
+        self._root_directory = os.path.abspath( os.path.expandvars(root_directory) )
         self._index_html_fp = "{0}/index.html".format( root_directory )
 
 
