@@ -75,14 +75,12 @@ class PipRepoManager( object ):
     @classmethod
     def get_link_line( cls, wheel_fp ):
         file_url = "file://" + wheel_fp.replace("\\", "/")
-        return r"""<a href="{0}"/>""".format( wheel_fp )
-
+        return r"""<a href="{0}">{1}</a>""".format( file_url, os.path.basename(file_url) )
 
 
     def _write_index_html( self, link_lines ):
         with open( self._index_html_fp, "w" ) as f:
             for link_line in link_lines:
-                line = link_line + "\n"
-                f.write( line )
-                yield line
+                f.write( link_line + "\n<br>\n" )
+                yield link_line
 
