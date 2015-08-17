@@ -44,7 +44,7 @@ class PipRepoManager( object ):
             written_lines = list(written_lines)
 
             print "\n\nCreated {0}:".format( self._index_html_fp )
-            print "".join(written_lines)
+            print "\n".join(written_lines)
 
         except Exception as e:
             print( "{e.__class__.__name__}: {e}".format(e=e) )
