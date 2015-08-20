@@ -3,6 +3,9 @@ import os
 import glob
 import itertools
 import subprocess
+import operator
+
+from . _multi_git import MultiGit
 
 
 
@@ -17,7 +20,46 @@ class PipRepoManager( object ):
         """
 
         self._root_directory = os.path.abspath( os.path.expandvars(root_directory) )
+
         self._index_html_fp = "{0}/index.html".format( root_directory )
+
+
+    def multi_git_git_gui_polluted( self ):
+        mg = MultiGit( self._root_directory )
+
+        git_repo_status_results = mg.gen_statii()
+        git_repo_status_results = itertools.ifilterfalse( operator.methodcaller("is_clean"), git_repo_status_results )
+
+        for git_repo_status_result in git_repo_status_results:
+            subprocess.call(["git", "gui"])
+
+
+    def multi_git_git_status_polluted( self ):
+        mg = MultiGit( self._root_directory )
+
+        git_repo_status_results = mg.gen_statii()
+        git_repo_status_results = itertools.ifilterfalse( operator.methodcaller("is_clean"), git_repo_status_results )
+
+        for git_repo_status_result in git_repo_status_results:
+            print git_repo_status_result
+
+
+    def create_wheel( self, projct_name ):
+        """
+            (Re-)builds the wheel for the given project via
+                >>> projct_name/python setup.py bdist_wheel
+        """
+
+        previous_cur_dir = os.curdir
+
+        try:
+            package_dp = os.path.join( self._root_directory, projct_name )
+            self.create_wheel_for_package( package_dp )
+
+        except Exception as e:
+            print( "{e.__class__.__name__}: {e}".format(e=e) )
+
+        os.chdir( previous_cur_dir )
 
 
     def create_index_html( self, rebuild_wheels=True ):
@@ -54,11 +96,11 @@ class PipRepoManager( object ):
 
     @classmethod
     def gen_create_wheels( cls, package_directories ):
-        return itertools.imap( cls.create_wheel, package_directories )
+        return itertools.imap( cls.create_wheel_for_package, package_directories )
 
 
     @classmethod
-    def create_wheel( cls, package_dp ):
+    def create_wheel_for_package( cls, package_dp ):
         os.chdir( package_dp )
         subprocess.call( ["python", "setup.py", "bdist_wheel"] )
         return package_dp
