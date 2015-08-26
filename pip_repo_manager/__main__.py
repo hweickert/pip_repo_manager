@@ -9,9 +9,10 @@ def main():
     parser.add_argument( "command", default="index", type=unicode, choices=["index", "create_wheel", "git_status", "git_gui"], help="What command to execute." )
     parser.add_argument( "root_directory",                                                            help="The directory that contains all the python packages (later used with 'pip install ... --find-links <<root_directory>>')." )
     parser.add_argument( "--project", default=None,                                                   help="The project to work on. Used in conjunction with 'create_wheel'." )
+    parser.add_argument( "--git_fp", default="git",                                               help="The git executable file path." )
     args = parser.parse_args()
 
-    pip_repo_manager = PipRepoManager( args.root_directory )
+    pip_repo_manager = PipRepoManager( args.root_directory, args.git_fp )
 
     if args.command == "create_wheel":
         if args.project is None:

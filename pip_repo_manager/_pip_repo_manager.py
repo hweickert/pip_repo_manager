@@ -10,7 +10,7 @@ from . _multi_git import MultiGit
 
 
 class PipRepoManager( object ):
-    def __init__( self, root_directory ):
+    def __init__( self, root_directory, git_executable_fp="git" ):
         """
             :param root_directory:
 
@@ -20,22 +20,23 @@ class PipRepoManager( object ):
         """
 
         self._root_directory = os.path.abspath( os.path.expandvars(root_directory) )
+        self._git_executable_fp = git_executable_fp
 
         self._index_html_fp = "{0}/index.html".format( root_directory )
 
 
     def multi_git_git_gui_polluted( self ):
-        mg = MultiGit( self._root_directory )
+        mg = MultiGit( self._root_directory, self._git_executable_fp )
 
         git_repo_status_results = mg.gen_statii()
         git_repo_status_results = itertools.ifilterfalse( operator.methodcaller("is_clean"), git_repo_status_results )
 
         for git_repo_status_result in git_repo_status_results:
-            subprocess.call(["git", "gui"])
+            subprocess.call([self._git_executable_fp, "gui"])
 
 
     def multi_git_git_status_polluted( self ):
-        mg = MultiGit( self._root_directory )
+        mg = MultiGit( self._root_directory, self._git_executable_fp )
 
         git_repo_status_results = mg.gen_statii()
         git_repo_status_results = itertools.ifilterfalse( operator.methodcaller("is_clean"), git_repo_status_results )
