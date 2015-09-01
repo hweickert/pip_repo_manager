@@ -25,7 +25,7 @@ class PipRepoManager( object ):
         self._index_html_fp = "{0}/index.html".format( root_directory )
 
 
-    def multi_git_git_gui_polluted( self ):
+    def multi_git_gui( self ):
         mg = MultiGit( self._root_directory, self._git_executable_fp )
 
         git_repo_status_results = mg.gen_statii()
@@ -35,7 +35,7 @@ class PipRepoManager( object ):
             subprocess.call([self._git_executable_fp, "gui"])
 
 
-    def multi_git_git_status_polluted( self ):
+    def multi_git_status( self ):
         mg = MultiGit( self._root_directory, self._git_executable_fp )
 
         git_repo_status_results = mg.gen_statii()
@@ -43,6 +43,21 @@ class PipRepoManager( object ):
 
         for git_repo_status_result in git_repo_status_results:
             print git_repo_status_result
+
+
+    def multi_git_pull_origin( self ):
+        mg = MultiGit( self._root_directory, self._git_executable_fp )
+
+        git_repo_status_results = mg.gen_statii()
+        git_repo_status_results = itertools.ifilterfalse( operator.methodcaller("is_clean"), git_repo_status_results )
+
+        for git_repo_status_result in git_repo_status_results:
+            print git_repo_status_result
+            proc = subprocess.Popen( [self._git_executable_fp, "rev-parse", "--abbrev-ref", "HEAD"], stdout=subprocess.PIPE )
+            for line in iter(proc.stdout.readline,''):
+                branch = line.rstrip()
+                break
+            subprocess.call([self._git_executable_fp, "pull", "origin", branch])
 
 
     def create_wheel( self, projct_name ):

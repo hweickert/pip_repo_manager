@@ -6,7 +6,7 @@ from . _pip_repo_manager import PipRepoManager
 
 def main():
     parser = argparse.ArgumentParser(description='PipRepoManager.')
-    parser.add_argument( "command", default="index", type=unicode, choices=["index", "create_wheel", "git_status", "git_gui"], help="What command to execute." )
+    parser.add_argument( "command", default="index", type=unicode, choices=["index", "create_wheel", "git_status", "git_gui", "git_pull_origin"], help="What command to execute." )
     parser.add_argument( "root_directory",                                                            help="The directory that contains all the python packages (later used with 'pip install ... --find-links <<root_directory>>')." )
     parser.add_argument( "--project", default=None,                                                   help="The project to work on. Used in conjunction with 'create_wheel'." )
     parser.add_argument( "--git_fp", default="git",                                               help="The git executable file path." )
@@ -23,10 +23,13 @@ def main():
         pip_repo_manager.create_index_html()
 
     elif args.command == "git_status":
-        pip_repo_manager.multi_git_git_status_polluted()
+        pip_repo_manager.multi_git_status()
 
     elif args.command == "git_gui":
-        pip_repo_manager.multi_git_git_gui_polluted()
+        pip_repo_manager.multi_git_gui()
+
+    elif args.command == "git_pull_origin":
+        pip_repo_manager.multi_git_pull_origin()
 
     else:
         raise ValueError( "Unknown command: '{0}'".format(parser.command) )
