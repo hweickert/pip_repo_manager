@@ -37,7 +37,10 @@ class MultiGit( object ):
                 git_repo_status_result = GitRepoStatusResult( "status", git_repo_dp )
                 os.chdir( git_repo_dp )
                 for line in call_and_gen_output( [self._git_executable_fp, "status", "--porcelain"] ):
-                    file_status, file_path = line.lstrip(" ").split(" ")
+                    try:
+                        file_status, file_path = line.lstrip(" ").split(" ")
+                    except ValueError:
+                        break
                     git_repo_status_result.append( (file_status, file_path) )
                 os.chdir( previous_dp )
                 yield git_repo_status_result
