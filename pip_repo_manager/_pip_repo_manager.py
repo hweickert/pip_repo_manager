@@ -31,7 +31,7 @@ class PipRepoManager( object ):
         git_repo_status_results = mg.gen_statii()
         git_repo_status_results = itertools.ifilterfalse( operator.methodcaller("is_clean"), git_repo_status_results )
 
-        for git_repo_status_result in git_repo_status_results:
+        for git_repo_status in git_repo_status_results:
             subprocess.call([self._git_executable_fp, "gui"])
 
 
@@ -41,8 +41,8 @@ class PipRepoManager( object ):
         git_repo_status_results = mg.gen_statii()
         git_repo_status_results = itertools.ifilterfalse( operator.methodcaller("is_clean"), git_repo_status_results )
 
-        for git_repo_status_result in git_repo_status_results:
-            print git_repo_status_result
+        for git_repo_status in git_repo_status_results:
+            print git_repo_status
 
 
     def multi_git_pull_origin( self ):
@@ -51,8 +51,8 @@ class PipRepoManager( object ):
         git_repo_status_results = mg.gen_statii()
         git_repo_status_results = itertools.ifilterfalse( operator.methodcaller("is_clean"), git_repo_status_results )
 
-        for git_repo_status_result in git_repo_status_results:
-            print git_repo_status_result
+        for git_repo_status in git_repo_status_results:
+            print git_repo_status
             proc = subprocess.Popen( [self._git_executable_fp, "rev-parse", "--abbrev-ref", "HEAD"], stdout=subprocess.PIPE )
             for line in iter(proc.stdout.readline,''):
                 branch = line.rstrip()
