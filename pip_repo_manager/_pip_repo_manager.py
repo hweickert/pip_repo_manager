@@ -6,7 +6,7 @@ import subprocess
 import operator
 
 from . _multi_git import MultiGit
-from . _recursive_requirement_generator import RecursiveRequirementGenerator
+from . _requirement_manager import RequirementManager
 
 
 
@@ -31,8 +31,9 @@ class PipRepoManager( object ):
 
         setup_py_fp = os.path.join( project_dp, "setup.py" )
 
-        for requirement in RecursiveRequirementGenerator(setup_py_fp, self._root_directory, sitepackages_dp):
-            requirement.install({})
+        requirement_manager = RequirementManager(setup_py_fp, self._root_directory, sitepackages_dp)
+        for package_installer in requirement_manager.gen_package_installers():
+            requirement_manager.install(package_installer)
 
 
     def multi_git_gui( self ):
