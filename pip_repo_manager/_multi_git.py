@@ -13,9 +13,9 @@ class MultiGit( object ):
         self._include_root_git_dp = include_root_git_dp
 
 
-    def gen_statii( self ):
+    def gen_statii( self, include_non_repositories=False ):
         try:
-            git_repo_dps = self.gen_git_repo_dps()
+            git_repo_dps = self.gen_git_repo_dps( include_non_repositories )
             for git_repo_dp in git_repo_dps:
                 git_repo_status = GitRepoStatus( git_repo_dp, self._git_executable_fp )
                 git_repo_status.load()
@@ -25,9 +25,13 @@ class MultiGit( object ):
             print( "{e.__class__.__name__}: {e}".format(e=e) )
 
 
-    def gen_git_repo_dps( self ):
+    def gen_git_repo_dps( self, include_non_repositories=False ):
         dps = self._gen_dps( self._root_dp )
-        return itertools.ifilter( self._is_git_repo, dps )
+        dps = itertools.ifilterfalse( lambda dp: os.path.basename(dp) == ".git", dps )
+        if not include_non_repositories:
+            dps = itertools.ifilter(      self._dot_git_subdirectory_or_file_exists, dps )
+        result = dps
+        return result
 
 
     def _gen_dps( self, root_dp ):
@@ -41,7 +45,7 @@ class MultiGit( object ):
             yield dp
 
 
-    def _is_git_repo( self, dp ):
+    def _dot_git_subdirectory_or_file_exists( self, dp ):
         return os.path.exists( dp+"/.git" )
 
 

@@ -3,7 +3,6 @@ import os
 import glob
 import itertools
 import subprocess
-import operator
 
 from . _multi_git import MultiGit
 from . _requirement_manager import RequirementManager
@@ -29,6 +28,7 @@ class PipRepoManager( object ):
     def install_develop( self, project_name, sitepackages_dp ):
         project_dp = os.path.join( self._root_directory, project_name )
 
+    def install_develop( self, project_dp, sitepackages_dp ):
         setup_py_fp = os.path.join( project_dp, "setup.py" )
 
         requirement_manager = RequirementManager(setup_py_fp, self._root_directory, sitepackages_dp)
@@ -39,36 +39,53 @@ class PipRepoManager( object ):
     def multi_git_gui( self ):
         mg = MultiGit( self._root_directory, self._git_executable_fp )
 
-        git_repo_status_results = mg.gen_statii()
-        git_repo_status_results = itertools.ifilterfalse( operator.methodcaller("is_clean"), git_repo_status_results )
+        git_repo_statii = mg.gen_statii()
+        git_repo_statii = itertools.ifilter( self._should_be_git_gui_listed, git_repo_statii )
 
-        for git_repo_status in git_repo_status_results:
+        for git_repo_status in git_repo_statii:
+            print git_repo_status
             subprocess.call([self._git_executable_fp, "gui"])
 
 
     def multi_git_status( self ):
         mg = MultiGit( self._root_directory, self._git_executable_fp )
 
-        git_repo_status_results = mg.gen_statii()
-        git_repo_status_results = itertools.ifilterfalse( operator.methodcaller("is_clean"), git_repo_status_results )
+        git_repo_statii = mg.gen_statii( include_non_repositories=True )
+        git_repo_statii = itertools.ifilter( self._should_be_git_status_listed, git_repo_statii )
+        git_repo_statii = reversed(sorted(git_repo_statii, cmp=self._git_status_sort_func ))
 
-        for git_repo_status in git_repo_status_results:
+        for git_repo_status in git_repo_statii:
             print git_repo_status
+
+
+    def _git_status_sort_func( self, grs_a, grs_b ):
+        result = 0
+        result = cmp( result, cmp(not grs_a.has_repository, not grs_b.has_repository))
+        result = cmp( result, cmp(not grs_a.has_origin, not grs_b.has_origin))
+        return result
 
 
     def multi_git_pull_origin( self ):
         mg = MultiGit( self._root_directory, self._git_executable_fp )
 
-        git_repo_status_results = mg.gen_statii()
-        git_repo_status_results = itertools.ifilterfalse( operator.methodcaller("is_clean"), git_repo_status_results )
+        git_repo_statii = mg.gen_statii()
+        git_repo_statii = itertools.ifilter( grs.has_origin, git_repo_statii )
 
-        for git_repo_status in git_repo_status_results:
+        for git_repo_status in git_repo_statii:
             print git_repo_status
             proc = subprocess.Popen( [self._git_executable_fp, "rev-parse", "--abbrev-ref", "HEAD"], stdout=subprocess.PIPE )
             for line in iter(proc.stdout.readline,''):
                 branch = line.rstrip()
                 break
             subprocess.call([self._git_executable_fp, "pull", "origin", branch])
+
+
+    def _should_be_git_gui_listed( self, grs ):
+        return grs.contents_modified() or not grs.has_origin
+
+
+    def _should_be_git_status_listed( self, grs ):
+        return grs.contents_modified() or not grs.has_repository or not grs.has_origin or grs.nothing_committed
 
 
     def create_wheel( self, projct_name ):

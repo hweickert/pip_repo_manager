@@ -23,8 +23,8 @@ class RequirementManager( object ):
     """
 
     def __init__( self, target_setup_py_fp, root_source_packages_dp, destination_sitepackages_dp ):
-        self._target_setup_py_fp = target_setup_py_fp
-        self._root_source_packages_dp = root_source_packages_dp
+        self._target_setup_py_fp =          target_setup_py_fp
+        self._root_source_packages_dp =     root_source_packages_dp
         self._destination_sitepackages_dp = destination_sitepackages_dp
 
 
@@ -35,11 +35,8 @@ class RequirementManager( object ):
 
     def install( self, package_installer ):
         print "Installing: {0}".format(package_installer.version_descriptor.name)
-        if platform.system() == "Windows":
-            pip_executable_fp = os.path.abspath(self._destination_sitepackages_dp+"/../../Scripts/pip.exe")
-        else:
-            raise NotImplementedError( "Cannot guess pip executable path for this platform." )
 
+        pip_executable_fp = self._get_pip_executable_fp()
         if not os.path.exists( pip_executable_fp ):
             raise Exception( "Target pip executable not found: {0}".format(pip_executable_fp) )
 
@@ -50,6 +47,15 @@ class RequirementManager( object ):
             with open( pth_fp, "w" ) as f:
                 f.write( package_installer.path )
             print "Written: {0}".format(pth_fp)
+
+
+    def _get_pip_executable_fp( self ):
+        if platform.system() == "Windows":
+            result = os.path.abspath( self._destination_sitepackages_dp+"/../../Scripts/pip.exe" )
+        else:
+            raise NotImplementedError( "Cannot guess pip executable path for this platform." )
+
+        return result
 
 
     def _gen_package_installers_recursive( self, setup_py_fp ):
