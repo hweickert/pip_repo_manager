@@ -70,11 +70,21 @@ class PipRepoManager( object ):
 
         for git_repo_status in git_repo_statii:
             print git_repo_status
+
             proc = subprocess.Popen( [self._git_executable_fp, "rev-parse", "--abbrev-ref", "HEAD"], stdout=subprocess.PIPE )
             for line in iter(proc.stdout.readline,''):
                 branch = line.rstrip()
                 break
+
+            previous_cur_dir = os.curdir
+            os.chdir(git_repo_status.path)
             subprocess.call([self._git_executable_fp, "pull", "origin", branch])
+
+            if os.path.exists( self._root_directory+"/.gitmodules" ):
+                subprocess.call( [self._git_executable_fp, "submodule", "update"] )
+
+            os.chdir( previous_cur_dir )
+
 
 
     def _should_be_git_gui_listed( self, grs ):
