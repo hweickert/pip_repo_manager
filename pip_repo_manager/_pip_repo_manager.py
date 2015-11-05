@@ -57,8 +57,8 @@ class PipRepoManager( object ):
 
     def _git_status_sort_func( self, grs_a, grs_b ):
         result = 0
-        result = cmp( result, cmp(not grs_a.has_repository, not grs_b.has_repository))
-        result = cmp( result, cmp(not grs_a.has_origin, not grs_b.has_origin))
+        result = cmp( result, cmp(not grs_a.has_repository, not grs_b.has_repository) )
+        result = cmp( result, cmp(not grs_a.has_origin, not grs_b.has_origin)         )
         return result
 
 
