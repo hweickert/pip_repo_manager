@@ -66,7 +66,7 @@ class PipRepoManager( object ):
         mg = MultiGit( self._root_directory, self._git_executable_fp )
 
         git_repo_statii = mg.gen_statii()
-        git_repo_statii = itertools.ifilter( grs.has_origin, git_repo_statii )
+        git_repo_statii = itertools.ifilter( lambda grs: grs.has_origin, git_repo_statii )
 
         for git_repo_status in git_repo_statii:
             print git_repo_status
