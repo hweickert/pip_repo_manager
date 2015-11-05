@@ -5,7 +5,7 @@ import itertools
 import subprocess
 
 from . _multi_git import MultiGit
-from . _requirement_manager import RequirementManager
+from . import _requirement_manager
 
 
 
@@ -25,15 +25,12 @@ class PipRepoManager( object ):
         self._index_html_fp = "{0}/index.html".format( root_directory )
 
 
-    def install_develop( self, project_name, sitepackages_dp ):
-        project_dp = os.path.join( self._root_directory, project_name )
+    def install_dependencies( self, project_dp, sitepackages_dp ):
+        _requirement_manager.install_project_dependencies( project_dp, as_link=False )
 
-    def install_develop( self, project_dp, sitepackages_dp ):
-        setup_py_fp = os.path.join( project_dp, "setup.py" )
 
-        requirement_manager = RequirementManager(setup_py_fp, self._root_directory, sitepackages_dp)
-        for package_installer in requirement_manager.gen_package_installers():
-            requirement_manager.install(package_installer)
+    def install_dependencies_develop( self, project_dp, sitepackages_dp ):
+        _requirement_manager.install_project_dependencies( project_dp, as_link=True )
 
 
     def multi_git_gui( self ):

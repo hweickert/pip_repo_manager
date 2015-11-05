@@ -14,12 +14,15 @@ def main():
             raise ValueError( "'--project' must be set when using the 'create_wheel' command." )
         pip_repo_manager.create_wheel( args.project )
 
-    elif args.command == "install_develop":
+    elif args.command == "install_dependencies":
         if args.project_path is None:
-            raise ValueError( "'--project_path' must be set when using the 'install_develop' command." )
-        if args.site_packages is None:
-            raise ValueError( "'--site_packages' must be set when using the 'install_develop' command." )
-        pip_repo_manager.install_develop( args.project_path, args.site_packages )
+            raise ValueError( "'--project_path' must be set when using the 'install_dependencies' command." )
+        pip_repo_manager.install_dependencies( args.project_path )
+
+    elif args.command == "install_dependencies_develop":
+        if args.project_path is None:
+            raise ValueError( "'--project_path' must be set when using the 'install_dependencies_develop' command." )
+        pip_repo_manager.install_dependencies_develop( args.project_path )
 
     elif args.command == "index":
         pip_repo_manager.create_index_html()
@@ -42,17 +45,13 @@ def _get_args():
     parser = argparse.ArgumentParser(description='PipRepoManager.')
 
     parser.add_argument(
-        "command", choices=["index", "create_wheel", "install_develop", "git_status", "git_gui", "git_pull_origin"], default="index", type=unicode,
+        "command", choices=["index", "create_wheel", "install_dependencies_develop", "install_dependencies", "git_status", "git_gui", "git_pull_origin"], default="index", type=unicode,
         help="What command to execute."
     )
 
     parser.add_argument(
         "root_directory",
         help="The directory that contains all the python package repositories." )
-
-    parser.add_argument(
-        "--site_packages", default=None,
-        help="The site-packages directory to install the links into. Used in conjunction with 'install_develop'." )
 
     parser.add_argument(
         "--project", default=None,
