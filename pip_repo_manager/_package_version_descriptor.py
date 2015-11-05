@@ -6,7 +6,11 @@ class PackageVersionDescriptor(object):
 
 
     def as_string( self ):
-        return "{0}{1}{2}".format( self.name, self.comparator, self.version )
+        if self.comparator is None or self.version is None:
+            result = self.name
+        else:
+            result = "{0}{1}{2}".format( self.name, self.comparator, self.version )
+        return result
 
 
     def __repr__(self):
