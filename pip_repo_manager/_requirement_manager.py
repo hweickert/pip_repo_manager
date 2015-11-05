@@ -18,9 +18,7 @@ def install_project_dependencies( project_dp, as_link=True ):
     root_source_packages_dp =     os.path.dirname( project_dp )
     destination_sitepackages_dp = _get_destination_sitepackages_dp( project_dp )
 
-    requirement_manager = RequirementManager( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp )
-    for package_installer in requirement_manager.gen_package_installers():
-        requirement_manager.install_package( package_installer, as_link=as_link )
+    install( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=as_link )
 
 
 def _get_setup_py_fp(project_dp):
@@ -31,6 +29,8 @@ def _get_setup_py_fp(project_dp):
 
 
 def install(setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=True):
+    project_dn = os.path.basename( os.path.dirname( setup_py_fp ) )
+
     requirement_manager = RequirementManager(setup_py_fp, root_source_packages_dp, destination_sitepackages_dp)
     for package_installer in requirement_manager.gen_package_installers():
         requirement_manager.install_package( package_installer, as_link )
@@ -108,7 +108,8 @@ class RequirementManager( object ):
 
 
     def _install_local_package_regularly( self ):
-        subprocess.call( [self._pip_executable_fp, "install", self._package_installer.version_descriptor.as_string(), "--find-links", self._root_source_packages_dp] )
+        # ignore dependencies because we deal with them by ourself
+        subprocess.call( [self._pip_executable_fp, "install", self._package_installer.version_descriptor.as_string(), "--no-dependencies", "--find-links", self._root_source_packages_dp] )
 
 
     def _install_foreign_package_regularly( self ):
@@ -117,7 +118,11 @@ class RequirementManager( object ):
 
     def gen_package_installers( self ):
         self._yielded = []
+        project_name = os.path.basename(os.path.dirname(self._target_setup_py_fp))
         for package_installer in self._gen_package_installers_recursive( self._target_setup_py_fp ):
+            # in case there is a cyclic dependency, refering to the original project name, skip it
+            if package_installer.version_descriptor.name == project_name:
+                continue
             yield package_installer
 
 
