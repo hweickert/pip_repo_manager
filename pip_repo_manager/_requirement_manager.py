@@ -2,7 +2,7 @@ import os
 import subprocess
 import platform
 
-from . import _setup_py
+from . import setup_py
 from . _package_version_descriptor import PackageVersionDescriptor
 from . _package_installer          import PackageInstaller
 
@@ -136,7 +136,7 @@ class RequirementManager( object ):
 
 
     def _gen_package_installers_recursive( self, setup_py_fp ):
-        require_lines = _setup_py.get_install_requires_lines( setup_py_fp )
+        require_lines = setup_py.get_dict( setup_py_fp )["install_requires"]
 
         for package_version_descriptor in self._gen_package_version_descriptors( require_lines ):
             if package_version_descriptor.name in self._yielded:
