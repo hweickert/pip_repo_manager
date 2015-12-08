@@ -25,12 +25,12 @@ class PipRepoManager( object ):
         self._index_html_fp = "{0}/index.html".format( root_directory )
 
 
-    def install_dependencies( self, project_dp ):
-        _requirement_manager.install_project_dependencies( project_dp, as_link=False )
+    def install_dependencies( self, project_dp, root_source_packages_dp ):
+        _requirement_manager.install_project_dependencies( project_dp, root_source_packages_dp=root_source_packages_dp, as_link=False )
 
 
-    def install_dependencies_develop( self, project_dp ):
-        _requirement_manager.install_project_dependencies( project_dp, as_link=True )
+    def install_dependencies_develop( self, project_dp, root_source_packages_dp ):
+        _requirement_manager.install_project_dependencies( project_dp, root_source_packages_dp=root_source_packages_dp, as_link=True )
 
 
     def multi_git_gui( self ):

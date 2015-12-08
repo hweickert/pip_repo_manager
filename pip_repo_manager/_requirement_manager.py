@@ -8,14 +8,14 @@ from . _package_installer          import PackageInstaller
 
 
 
-def install_project_dependencies( project_dp, as_link=True ):
+def install_project_dependencies( project_dp, root_source_packages_dp=None, as_link=True ):
     """
         Highest level installation functions.
         Requires a project directory path.
     """
 
     setup_py_fp =                 _get_setup_py_fp( project_dp )
-    root_source_packages_dp =     os.path.dirname( project_dp )
+    root_source_packages_dp =     root_source_packages_dp
     destination_sitepackages_dp = _get_destination_sitepackages_dp( project_dp )
 
     install( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=as_link )
