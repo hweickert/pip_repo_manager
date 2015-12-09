@@ -16,12 +16,50 @@ class GitRepoStatus( list ):
         self.has_origin = False
         self.has_repository = False
         self.nothing_committed = False
+        self.n_commits_behind_origin = -1
 
 
     def contents_modified( self ):
         """ Means the repo does not have any modifications, additions or the like. """
 
         return self.as_dict() != {}
+
+
+    def _get_how_many_commits_behind_origin( self ):
+        result = 0
+
+        previous_dp = os.curdir
+        os.chdir( self.path )
+
+        active_branch = self._get_active_branch()
+        if active_branch is None:
+            os.chdir( previous_dp )
+            raise ValueError( "Unable to query branch for: {0}".format(self.path) )
+
+        list( call_and_gen_output([unicode(self._git_executable_fp), "fetch"]) )
+
+        for line in call_and_gen_output( [unicode(self._git_executable_fp), "log", "HEAD..origin/"+active_branch, "--oneline"] ):
+            if not line.strip():
+                continue
+            result += 1
+
+        os.chdir( previous_dp )
+
+        return result
+
+
+    def _get_active_branch( self ):
+        result = None
+
+        previous_dp = os.curdir
+        os.chdir( self.path )
+
+        for line in call_and_gen_output( [unicode(self._git_executable_fp), "rev-parse", "--abbrev-ref", "HEAD"] ):
+            result = line.strip()
+
+        os.chdir( previous_dp )
+
+        return result
 
 
     def load( self ):
@@ -43,9 +81,11 @@ class GitRepoStatus( list ):
 
         if "origin" in call_and_gen_output( [self._git_executable_fp, "remote"] ):
             self.has_origin = True
+            self.n_commits_behind_origin = self._get_how_many_commits_behind_origin()
 
         if "fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree." in call_and_gen_output( [self._git_executable_fp, "rev-list", "HEAD", "--count"], "stderr" ):
             self.nothing_committed = True
+
 
         os.chdir( previous_dp )
 
@@ -79,6 +119,9 @@ class GitRepoStatus( list ):
         else:
             parts += [_wrap_in_color("red", "MissingRepository")]
 
+        if self.n_commits_behind_origin > 0:
+            parts += [_wrap_in_color("red", "CommitsBehindOrigin:{0}".format(self.n_commits_behind_origin))]
+
         result = "<{0}>".format( " ".join(parts) )
 
         # if not self.has_repository:
@@ -111,5 +154,3 @@ def call_and_gen_output( command_line, mode="stdout" ):
             yield line.rstrip()
     # exit_code = process.poll()
     # yield exit_code
-
-
