@@ -2,20 +2,20 @@ import os
 import subprocess
 import platform
 
-from . import _setup_py
+from . import setup_py
 from . _package_version_descriptor import PackageVersionDescriptor
 from . _package_installer          import PackageInstaller
 
 
 
-def install_project_dependencies( project_dp, as_link=True ):
+def install_project_dependencies( project_dp, root_source_packages_dp=None, as_link=True ):
     """
         Highest level installation functions.
         Requires a project directory path.
     """
 
     setup_py_fp =                 _get_setup_py_fp( project_dp )
-    root_source_packages_dp =     os.path.dirname( project_dp )
+    root_source_packages_dp =     root_source_packages_dp
     destination_sitepackages_dp = _get_destination_sitepackages_dp( project_dp )
 
     install( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=as_link )
@@ -136,7 +136,7 @@ class RequirementManager( object ):
 
 
     def _gen_package_installers_recursive( self, setup_py_fp ):
-        require_lines = _setup_py.get_install_requires_lines( setup_py_fp )
+        require_lines = setup_py.get_dict( setup_py_fp )["install_requires"]
 
         for package_version_descriptor in self._gen_package_version_descriptors( require_lines ):
             if package_version_descriptor.name in self._yielded:

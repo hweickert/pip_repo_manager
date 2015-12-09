@@ -17,12 +17,12 @@ def main():
     elif args.command == "install_dependencies":
         if args.project_path is None:
             raise ValueError( "'--project_path' must be set when using the 'install_dependencies' command." )
-        pip_repo_manager.install_dependencies( args.project_path )
+        pip_repo_manager.install_dependencies( args.project_path, args.root_directory )
 
     elif args.command == "install_dependencies_develop":
         if args.project_path is None:
             raise ValueError( "'--project_path' must be set when using the 'install_dependencies_develop' command." )
-        pip_repo_manager.install_dependencies_develop( args.project_path )
+        pip_repo_manager.install_dependencies_develop( args.project_path, args.root_directory )
 
     elif args.command == "index":
         pip_repo_manager.create_index_html()
