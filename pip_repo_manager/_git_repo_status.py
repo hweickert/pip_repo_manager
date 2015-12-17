@@ -1,3 +1,4 @@
+import re
 import os
 import time
 import subprocess
@@ -9,6 +10,8 @@ colorama.init()
 
 
 class GitRepoStatus( list ):
+    _rex_log_commit_oneline = re.compile("^[a-z0-9]{7}\s.*$")
+
     def __init__( self, path, git_executable_fp ):
         list.__init__( self )
         self.path = path
@@ -43,6 +46,8 @@ class GitRepoStatus( list ):
 
         for line in call_and_gen_output( [unicode(self._git_executable_fp), "log", "HEAD..origin/"+active_branch, "--oneline"] ):
             if not line.strip():
+                continue
+            if self._rex_log_commit_oneline.match(line) is None:
                 continue
             result += 1
 
@@ -122,7 +127,6 @@ class GitRepoStatus( list ):
 
     def _get_repr_string_parts( self ):
         result = [self.__class__.__name__, os.path.basename(self.path)]
-
         type_counts_string = " ".join(["{0}:{1}".format(t, len(c)) for t, c in self.as_dict().items()])
         if type_counts_string:
             result += [type_counts_string]
