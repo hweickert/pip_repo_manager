@@ -39,6 +39,7 @@ class PipRepoManager( object ):
         git_repo_statii = mg.gen_statii()
         git_repo_statii = itertools.ifilter( self._should_be_git_gui_listed, git_repo_statii )
 
+        print( "\n\n" )
         for git_repo_status in git_repo_statii:
             print git_repo_status
             subprocess.call([self._git_executable_fp, "gui"])
@@ -47,12 +48,20 @@ class PipRepoManager( object ):
     def multi_git_status( self ):
         mg = MultiGit( self._root_directory, self._git_executable_fp )
 
+        print "Querying repository statii ..."
         git_repo_statii = mg.gen_statii( include_non_repositories=True )
+        git_repo_statii = itertools.imap(    self.print_repo_status_queried,    git_repo_statii )
         git_repo_statii = itertools.ifilter( self._should_be_git_status_listed, git_repo_statii )
         git_repo_statii = reversed(sorted(git_repo_statii, cmp=self._git_status_sort_func ))
 
         for git_repo_status in git_repo_statii:
             print git_repo_status
+
+
+    def print_repo_status_queried( self, grs ):
+        name = os.path.basename(grs.path)
+        print( "- {0}".format(name) )
+        return grs
 
 
     def _git_status_sort_func( self, grs_a, grs_b ):
