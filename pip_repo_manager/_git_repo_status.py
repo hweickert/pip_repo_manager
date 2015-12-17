@@ -1,6 +1,7 @@
 import os
-import collections
+import time
 import subprocess
+import collections
 
 import colorama
 colorama.init()
@@ -17,6 +18,8 @@ class GitRepoStatus( list ):
         self.has_repository = False
         self.nothing_committed = False
         self.n_commits_behind_origin = -1
+
+        self.load_time = -1
 
 
     def contents_modified( self ):
@@ -63,6 +66,8 @@ class GitRepoStatus( list ):
 
 
     def load( self ):
+        start_time = time.time()
+
         if os.path.exists(self.path+"/.git"):
             self.has_repository = True
         else:
@@ -89,6 +94,9 @@ class GitRepoStatus( list ):
 
         os.chdir( previous_dp )
 
+        end_time = time.time()
+        self.load_time = round(end_time - start_time, 2)
+
 
     def as_dict( self ):
         """
@@ -106,28 +114,37 @@ class GitRepoStatus( list ):
 
 
     def __repr__( self ):
-        parts = [self.__class__.__name__, os.path.basename(self.path)]
+        repr_string_parts = self._get_repr_string_parts()
+        result =            self._get_repr_string_from_parts( repr_string_parts )
+
+        return result
+
+
+    def _get_repr_string_parts( self ):
+        result = [self.__class__.__name__, os.path.basename(self.path)]
 
         type_counts_string = " ".join(["{0}:{1}".format(t, len(c)) for t, c in self.as_dict().items()])
         if type_counts_string:
-            parts += [type_counts_string]
+            result += [type_counts_string]
         if self.has_repository:
             if not self.has_origin:
-                parts += [_wrap_in_color("yellow", "MissingOrigin")]
+                result += [_wrap_in_color("yellow", "MissingOrigin")]
             if self.nothing_committed:
-                parts += [_wrap_in_color("red", "NothingCommitted")]
+                result += [_wrap_in_color("red", "NothingCommitted")]
         else:
-            parts += [_wrap_in_color("red", "MissingRepository")]
+            result += [_wrap_in_color("red", "MissingRepository")]
 
         if self.n_commits_behind_origin > 0:
-            parts += [_wrap_in_color("red", "CommitsBehindOrigin:{0}".format(self.n_commits_behind_origin))]
+            result += [_wrap_in_color("red", "CommitsBehindOrigin:{0}".format(self.n_commits_behind_origin))]
 
-        result = "<{0}>".format( " ".join(parts) )
+        return result
 
-        # if not self.has_repository:
-        #     result = "{0}{1}{2}".format(colorama.Fore.CYAN, result, colorama.Style.RESET_ALL)
-        # else:
-        #     result = "{0}{1}{2}".format(colorama.Style.BRIGHT, result, colorama.Style.RESET_ALL)
+
+    def _get_repr_string_from_parts( self, parts ):
+        if self.load_time == -1:
+            result = "<{0}>".format( " ".join(parts) )
+        else:
+            result = "<{0} [{1}s]>".format( " ".join(parts), self.load_time )
 
         return result
 
