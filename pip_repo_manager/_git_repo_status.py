@@ -11,6 +11,7 @@ colorama.init()
 
 class GitRepoStatus( list ):
     _rex_log_commit_oneline = re.compile("^[a-z0-9]{7}\s.*$")
+    _rex_status_oneline =     re.compile("^[a-zA-Z0-9\s]{2}\s.*$")
 
     def __init__( self, path, git_executable_fp ):
         list.__init__( self )
@@ -83,10 +84,10 @@ class GitRepoStatus( list ):
         os.chdir( self.path )
 
         for line in call_and_gen_output( [self._git_executable_fp, "status", "--porcelain"] ):
-            try:
-                file_status, file_path = line.lstrip(" ").split(" ")
-            except ValueError:
-                break
+            if self._rex_status_oneline.match(line) is None:
+                # skip all obsolete lines
+                continue
+            file_status, file_path = line.lstrip(" ").split(" ")
             self.append( (file_status, file_path) )
 
         if "origin" in call_and_gen_output( [self._git_executable_fp, "remote"] ):
