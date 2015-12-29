@@ -8,7 +8,7 @@ from . _package_installer          import PackageInstaller
 
 
 
-def install_project_dependencies( project_dp, root_source_packages_dp=None, as_link=True ):
+def install_project_dependencies( project_dp, root_source_packages_dp=None, as_link=True, environment=None ):
     """
         Highest level installation functions.
         Requires a project directory path.
@@ -16,7 +16,7 @@ def install_project_dependencies( project_dp, root_source_packages_dp=None, as_l
 
     setup_py_fp =                 _get_setup_py_fp( project_dp )
     root_source_packages_dp =     root_source_packages_dp
-    destination_sitepackages_dp = _get_destination_sitepackages_dp( project_dp )
+    destination_sitepackages_dp = _get_destination_sitepackages_dp( project_dp, environment )
 
     install( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=as_link )
 
@@ -37,9 +37,15 @@ def install(setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, a
 
 
 
-def _get_destination_sitepackages_dp( project_dp ):
+def _get_destination_sitepackages_dp( project_dp, environment ):
     venv_destination_sitepackages_dp = project_dp + "/venv/Lib/site-packages"
     env_destination_sitepackages_dp =  project_dp + "/env/Lib/site-packages"
+
+    if environment is not None:
+        result = "{0}/{1}/Lib/site-packages".format(project_dp, environment)
+        if not os.path.exists(result):
+            raise ValueError( "Unable to find environment directory: \n  {0}".format(result) )
+        return result
 
     if os.path.exists(venv_destination_sitepackages_dp):
         result = venv_destination_sitepackages_dp
