@@ -25,6 +25,11 @@ class PipRepoManager( object ):
         self._index_html_fp = "{0}/index.html".format( root_directory )
 
 
+    def gen_dependencies( self, project_dp, root_source_packages_dp, recursive=True ):
+        for dependency in _requirement_manager.gen_dependencies( project_dp, root_source_packages_dp, recursive ):
+            yield dependency
+
+
     def install_dependencies( self, project_dp, root_source_packages_dp, environment=None ):
         _requirement_manager.install_project_dependencies( project_dp, root_source_packages_dp=root_source_packages_dp, as_link=False, environment=environment )
 

@@ -21,6 +21,18 @@ def install_project_dependencies( project_dp, root_source_packages_dp=None, as_l
     install( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=as_link )
 
 
+def gen_dependencies( project_dp, root_source_packages_dp, recursive=True ):
+    setup_py_fp = _get_setup_py_fp( project_dp )
+    for package_installer in _gen_package_installers( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp="dummy", recursive=recursive ):
+        yield (package_installer.version_descriptor, package_installer.path)
+
+
+def install(setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=True):
+    requirement_manager = RequirementManager(setup_py_fp, root_source_packages_dp, destination_sitepackages_dp)
+    for package_installer in _gen_package_installers( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=as_link, recursive=True ):
+        requirement_manager.install_package( package_installer, as_link )
+
+
 def _get_setup_py_fp(project_dp):
     result = project_dp+"/setup.py"
     if not os.path.exists( result ):
@@ -28,13 +40,12 @@ def _get_setup_py_fp(project_dp):
     return result
 
 
-def install(setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=True):
+def _gen_package_installers( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=True, recursive=True ):
     project_dn = os.path.basename( os.path.dirname( setup_py_fp ) )
 
     requirement_manager = RequirementManager(setup_py_fp, root_source_packages_dp, destination_sitepackages_dp)
-    for package_installer in requirement_manager.gen_package_installers():
-        requirement_manager.install_package( package_installer, as_link )
-
+    for package_installer in requirement_manager._gen_package_installers( recursive=recursive ):
+        yield package_installer
 
 
 def _get_destination_sitepackages_dp( project_dp, environment ):
@@ -106,6 +117,7 @@ class RequirementManager( object ):
     def _package_is_locally_available( self ):
         return self._package_installer.path is not None
 
+
     def _install_local_package_via_pth_link( self ):
         pth_fp = self._destination_sitepackages_dp + "/{0}.pth".format( self._package_installer.version_descriptor.name )
         with open( pth_fp, "w" ) as f:
@@ -122,10 +134,10 @@ class RequirementManager( object ):
         subprocess.call( [self._pip_executable_fp, "install", self._package_installer.version_descriptor.as_string()] )
 
 
-    def gen_package_installers( self ):
+    def _gen_package_installers( self, recursive=True ):
         self._yielded = []
         project_name = os.path.basename(os.path.dirname(self._target_setup_py_fp))
-        for package_installer in self._gen_package_installers_recursive( self._target_setup_py_fp ):
+        for package_installer in self._gen_package_installers_recursive( self._target_setup_py_fp, recursive ):
             # in case there is a cyclic dependency, refering to the original project name, skip it
             if package_installer.version_descriptor.name == project_name:
                 continue
@@ -141,7 +153,7 @@ class RequirementManager( object ):
         return result
 
 
-    def _gen_package_installers_recursive( self, setup_py_fp ):
+    def _gen_package_installers_recursive( self, setup_py_fp, recursive ):
         require_lines = setup_py.get_dict( setup_py_fp )["install_requires"]
 
         for package_version_descriptor in self._gen_package_version_descriptors( require_lines ):
@@ -155,8 +167,9 @@ class RequirementManager( object ):
 
             if os.path.exists( package_setup_py_fp ):
                 exists = True
-                for package_installer in self._gen_package_installers_recursive( package_setup_py_fp ):
-                    yield package_installer
+                if recursive:
+                    for package_installer in self._gen_package_installers_recursive( package_setup_py_fp, recursive=recursive ):
+                        yield package_installer
             else:
                 exists = False
 
@@ -177,8 +190,3 @@ class RequirementManager( object ):
                     package_comparator = comparator
                     break
             yield PackageVersionDescriptor( package_name, package_comparator, package_version )
-
-
-
-if __name__ == "__main__":
-    install_project_dependencies( r"D:\hweickert\dev\vfx\local\mv_vfx_naming", as_link=False )
