@@ -99,7 +99,7 @@ class RequirementManager( object ):
     def _get_existing_pip_executable_fp( self ):
         result = self._get_pip_executable_fp()
         if not os.path.exists( result ):
-            raise Exception( "Target pip executable not found: {0}".format(self._pip_executable_fp) )
+            raise Exception( "Target pip executable not found: {0}".format(result) )
         return result
 
 
