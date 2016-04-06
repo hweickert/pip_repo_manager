@@ -19,10 +19,8 @@ class PipRepoManager( object ):
                 containing all necessary wheel links.
         """
 
-        self._root_directory = os.path.abspath( os.path.expandvars(root_directory) )
+        self._root_directory =    os.path.abspath( os.path.expandvars(root_directory) )
         self._git_executable_fp = git_executable_fp
-
-        self._index_html_fp = "{0}/index.html".format( root_directory )
 
 
     def gen_dependencies( self, project_dp, root_source_packages_dp, recursive=True ):
@@ -109,16 +107,16 @@ class PipRepoManager( object ):
         return grs.contents_modified() or not grs.has_repository or not grs.has_origin or grs.nothing_committed or grs.n_commits_behind_origin > 0
 
 
-    def create_wheel( self, projct_name ):
+    def create_wheel( self, project_name ):
         """
             (Re-)builds the wheel for the given project via
-                >>> projct_name/python setup.py bdist_wheel
+                >>> project_name/python setup.py bdist_wheel
         """
 
         previous_cur_dir = os.curdir
 
         try:
-            package_dp = os.path.join( self._root_directory, projct_name )
+            package_dp = os.path.join( self._root_directory, project_name )
             self.create_wheel_for_package( package_dp )
 
         except Exception as e:
@@ -127,7 +125,7 @@ class PipRepoManager( object ):
         os.chdir( previous_cur_dir )
 
 
-    def create_index_html( self, rebuild_wheels=True ):
+    def create_index_html( self, rebuild_wheels=True, root_source_packages_dp=None ):
         """
             Creates a new index.html based on found python packages / wheels.
 
@@ -136,21 +134,23 @@ class PipRepoManager( object ):
         """
 
         previous_cur_dir = os.curdir
+        root_source_packages_dp = self._root_directory if root_source_packages_dp is None else root_source_packages_dp
 
         try:
-            glob_p = "{0}/*/setup.py".format(self._root_directory)
+            glob_p = "{0}/*/setup.py".format(root_source_packages_dp)
 
-            setup_py_fps = glob.iglob( glob_p )
-            package_directories = itertools.imap( os.path.dirname, setup_py_fps )
+            setup_py_fps =            glob.iglob( glob_p )
+            package_directories =     itertools.imap( os.path.dirname, setup_py_fps )
             if rebuild_wheels:
                 package_directories = self.gen_create_wheels( package_directories )
-            wheel_fps = self.gen_wheel_filepaths( package_directories )
-            link_lines = itertools.imap( self.get_link_line, wheel_fps )
+            wheel_fps =               self.gen_wheel_filepaths( package_directories )
+            link_lines =              itertools.imap( self.get_link_line, wheel_fps )
 
-            written_lines = self._write_index_html( link_lines )
+            index_html_fp = "{0}/index.html".format( root_source_packages_dp )
+            written_lines = self._write_index_html( index_html_fp, link_lines )
             written_lines = list(written_lines)
 
-            print "\n\nCreated {0}:".format( self._index_html_fp )
+            print "\n\nCreated {0}:".format( index_html_fp )
             print "\n".join(written_lines)
 
         except Exception as e:
@@ -185,8 +185,8 @@ class PipRepoManager( object ):
         return r"""<a href="{0}">{1}</a>""".format( file_url, os.path.basename(file_url) )
 
 
-    def _write_index_html( self, link_lines ):
-        with open( self._index_html_fp, "w" ) as f:
+    def _write_index_html( self, index_html_fp, link_lines ):
+        with open( index_html_fp, "w" ) as f:
             for link_line in link_lines:
                 f.write( link_line + "\n<br>\n" )
                 yield link_line
