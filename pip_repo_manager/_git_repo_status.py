@@ -21,7 +21,7 @@ class GitRepoStatus( list ):
         self.has_origin = False
         self.has_repository = False
         self.nothing_committed = False
-        self.n_commits_behind_origin = -1
+        self.n_commits_behind_origin = 0
 
         self.load_time = -1
 
@@ -45,12 +45,22 @@ class GitRepoStatus( list ):
 
         list( call_and_gen_output([unicode(self._git_executable_fp), "fetch"]) )
 
-        for line in call_and_gen_output( [unicode(self._git_executable_fp), "log", "HEAD..origin/"+active_branch, "--oneline"] ):
+        for line in call_and_gen_output( [unicode(self._git_executable_fp), "log", "HEAD..origin/{0}".format(active_branch), "--oneline"] ):
             if not line.strip():
                 continue
             if self._rex_log_commit_oneline.match(line) is None:
                 continue
             result += 1
+
+        if result == 0:
+            # possibly we are ahead in the number of commits, subtract from result
+            for line in call_and_gen_output( [unicode(self._git_executable_fp), "log", "origin/{0}..HEAD".format(active_branch), "--oneline"] ):
+                if not line.strip():
+                    continue
+                if self._rex_log_commit_oneline.match(line) is None:
+                    continue
+                result -= 1
+
 
         os.chdir( previous_dp )
 
@@ -87,7 +97,13 @@ class GitRepoStatus( list ):
             if self._rex_status_oneline.match(line) is None:
                 # skip all obsolete lines
                 continue
-            file_status, file_path = line.lstrip(" ").split(" ")
+            parts = line.lstrip(" ").split(" ")
+            while "" in parts:
+                parts.remove( "" )
+            if len(parts) != 2:
+                raise ValueError( "Invalid log line: {0}".format(line) )
+
+            file_status, file_path = parts[0], parts[1]
             self.append( (file_status, file_path) )
 
         if "origin" in call_and_gen_output( [self._git_executable_fp, "remote"] ):
@@ -141,6 +157,8 @@ class GitRepoStatus( list ):
 
         if self.n_commits_behind_origin > 0:
             result += [_wrap_in_color("red", "CommitsBehindOrigin:{0}".format(self.n_commits_behind_origin))]
+        if self.n_commits_behind_origin < 0:
+            result += [_wrap_in_color("red", "CommitsAheadOrigin:{0}".format(abs(self.n_commits_behind_origin)))]
 
         return result
 
