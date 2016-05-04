@@ -8,7 +8,7 @@ from . _package_installer          import PackageInstaller
 
 
 
-def install_project_dependencies( project_dp, root_source_packages_dp=None, as_link=True, environment=None ):
+def install_project_dependencies( project_dp, root_source_packages_dp=None, as_link=True, environment=None, destination_sitepackages_dp=None ):
     """
         Highest level installation functions.
         Requires a project directory path.
@@ -16,7 +16,9 @@ def install_project_dependencies( project_dp, root_source_packages_dp=None, as_l
 
     setup_py_fp =                 _get_setup_py_fp( project_dp )
     root_source_packages_dp =     root_source_packages_dp
-    destination_sitepackages_dp = _get_destination_sitepackages_dp( project_dp, environment )
+
+    if destination_sitepackages_dp is None:
+        destination_sitepackages_dp = _get_destination_sitepackages_dp( project_dp, environment )
 
     install( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=as_link )
 
@@ -27,10 +29,17 @@ def gen_dependencies( project_dp, root_source_packages_dp, recursive=True ):
         yield (package_installer.version_descriptor, package_installer.path)
 
 
-def install(setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=True):
-    requirement_manager = RequirementManager(setup_py_fp, root_source_packages_dp, destination_sitepackages_dp)
-    for package_installer in _gen_package_installers( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=as_link, recursive=True ):
+def install( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=True ):
+    requirement_manager = RequirementManager( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp )
+    for package_installer in _gen_package_installers( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, recursive=True ):
         requirement_manager.install_package( package_installer, as_link )
+
+
+def create_pth_link( destination_sitepackages_dp, name, target_repository_dp ):
+    pth_fp = "{destination_sitepackages_dp}/{name}.pth".format( **locals() )
+    with open( pth_fp, "w" ) as f:
+        f.write( target_repository_dp )
+    print "Written: {pth_fp}".format(**locals())
 
 
 def _get_setup_py_fp(project_dp):
@@ -40,11 +49,11 @@ def _get_setup_py_fp(project_dp):
     return result
 
 
-def _gen_package_installers( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=True, recursive=True ):
+def _gen_package_installers( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, recursive=True ):
     project_dn = os.path.basename( os.path.dirname( setup_py_fp ) )
 
     requirement_manager = RequirementManager(setup_py_fp, root_source_packages_dp, destination_sitepackages_dp)
-    for package_installer in requirement_manager._gen_package_installers( recursive=recursive ):
+    for package_installer in requirement_manager.gen_package_installers( recursive=recursive ):
         yield package_installer
 
 
@@ -90,16 +99,23 @@ class RequirementManager( object ):
 
 
     def install_package( self, package_installer, as_link=True ):
-        self._as_link = as_link
+        self._as_link =           as_link
         self._package_installer = package_installer
+
         self._pip_executable_fp = self._get_existing_pip_executable_fp()
+
         self._install_package()
+
+
+    def _create_pth_link( self, name, target_repository_dp ):
+        create_pth_link( self._destination_sitepackages_dp, name, target_repository_dp )
 
 
     def _get_existing_pip_executable_fp( self ):
         result = self._get_pip_executable_fp()
         if not os.path.exists( result ):
-            raise Exception( "Target pip executable not found: {0}".format(result) )
+            # ok, pip wasn't found but maybe it is on the PATH variable
+            result = "pip"
         return result
 
 
@@ -107,34 +123,28 @@ class RequirementManager( object ):
         print "Installing: {0}".format(self._package_installer.version_descriptor.name)
         if self._package_is_locally_available():
             if self._as_link:
-                self._install_local_package_via_pth_link()
+                self._create_pth_link( self._package_installer.version_descriptor.name, self._package_installer.path )
             else:
-                self._install_local_package_regularly()
+                self._install_local_package()
         else:
-            self._install_foreign_package_regularly()
+            self._install_foreign_package()
 
 
     def _package_is_locally_available( self ):
         return self._package_installer.path is not None
 
 
-    def _install_local_package_via_pth_link( self ):
-        pth_fp = self._destination_sitepackages_dp + "/{0}.pth".format( self._package_installer.version_descriptor.name )
-        with open( pth_fp, "w" ) as f:
-            f.write( self._package_installer.path )
-        print "Written: {0}".format(pth_fp)
-
-
-    def _install_local_package_regularly( self ):
+    def _install_local_package( self ):
         # ignore dependencies because we deal with them by ourself
-        subprocess.call( [self._pip_executable_fp, "install", self._package_installer.version_descriptor.as_string(), "--no-dependencies", "--find-links", self._root_source_packages_dp] )
+        command = [self._pip_executable_fp, "install", self._package_installer.version_descriptor.as_string(), "--no-dependencies", "--find-links", self._root_source_packages_dp, "--target", self._destination_sitepackages_dp]
+        subprocess.call( command )
 
 
-    def _install_foreign_package_regularly( self ):
-        subprocess.call( [self._pip_executable_fp, "install", self._package_installer.version_descriptor.as_string()] )
+    def _install_foreign_package( self ):
+        subprocess.call( [self._pip_executable_fp, "install", self._package_installer.version_descriptor.as_string(), "--target", self._destination_sitepackages_dp] )
 
 
-    def _gen_package_installers( self, recursive=True ):
+    def gen_package_installers( self, recursive=True ):
         self._yielded = []
         project_name = os.path.basename(os.path.dirname(self._target_setup_py_fp))
         for package_installer in self._gen_package_installers_recursive( self._target_setup_py_fp, recursive ):
