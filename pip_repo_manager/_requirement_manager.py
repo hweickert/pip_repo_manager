@@ -2,7 +2,7 @@ import os
 import subprocess
 import platform
 
-from . import setup_py
+from . import requirements
 from . _package_version_descriptor import PackageVersionDescriptor
 from . _package_installer          import PackageInstaller
 
@@ -14,24 +14,22 @@ def install_project_dependencies( project_dp, root_source_packages_dp=None, as_l
         Requires a project directory path.
     """
 
-    setup_py_fp =                 _get_setup_py_fp( project_dp )
     root_source_packages_dp =     root_source_packages_dp
 
     if destination_sitepackages_dp is None:
         destination_sitepackages_dp = _get_destination_sitepackages_dp( project_dp, environment )
 
-    install( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=as_link )
+    install( project_dp, root_source_packages_dp, destination_sitepackages_dp, as_link=as_link )
 
 
 def gen_dependencies( project_dp, root_source_packages_dp, recursive=True ):
-    setup_py_fp = _get_setup_py_fp( project_dp )
-    for package_installer in _gen_package_installers( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp="dummy", recursive=recursive ):
+    for package_installer in _gen_package_installers( project_dp, root_source_packages_dp, destination_sitepackages_dp="dummy", recursive=recursive ):
         yield (package_installer.version_descriptor, package_installer.path)
 
 
-def install( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, as_link=True ):
-    requirement_manager = RequirementManager( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp )
-    for package_installer in _gen_package_installers( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, recursive=True ):
+def install( project_dp, root_source_packages_dp, destination_sitepackages_dp, as_link=True ):
+    requirement_manager = RequirementManager( project_dp, root_source_packages_dp, destination_sitepackages_dp )
+    for package_installer in _gen_package_installers( project_dp, root_source_packages_dp, destination_sitepackages_dp, recursive=True ):
         requirement_manager.install_package( package_installer, as_link )
 
 
@@ -42,17 +40,10 @@ def create_pth_link( destination_sitepackages_dp, name, target_repository_dp ):
     print "Written: {pth_fp}".format(**locals())
 
 
-def _get_setup_py_fp(project_dp):
-    result = project_dp+"/setup.py"
-    if not os.path.exists( result ):
-        raise ValueError( "Required 'setup.py' not found: {0}".format(result) )
-    return result
+def _gen_package_installers( project_dp, root_source_packages_dp, destination_sitepackages_dp, recursive=True ):
+    project_dn = os.path.basename( project_dp )
 
-
-def _gen_package_installers( setup_py_fp, root_source_packages_dp, destination_sitepackages_dp, recursive=True ):
-    project_dn = os.path.basename( os.path.dirname( setup_py_fp ) )
-
-    requirement_manager = RequirementManager(setup_py_fp, root_source_packages_dp, destination_sitepackages_dp)
+    requirement_manager = RequirementManager(project_dp, root_source_packages_dp, destination_sitepackages_dp)
     for package_installer in requirement_manager.gen_package_installers( recursive=recursive ):
         yield package_installer
 
@@ -81,7 +72,7 @@ def _get_destination_sitepackages_dp( project_dp, environment ):
 class RequirementManager( object ):
     r"""
         Generates editable requirement instances based on the given
-        :target_setup_py_fp:.
+        :target_package_dp:.
 
         :root_source_packages_dp:
             Points to a directory where the requested requirements are stored.
@@ -92,8 +83,8 @@ class RequirementManager( object ):
             be generated (if the requirement.install() function gets called. ).
     """
 
-    def __init__( self, target_setup_py_fp, root_source_packages_dp, destination_sitepackages_dp ):
-        self._target_setup_py_fp =          target_setup_py_fp
+    def __init__( self, target_package_dp, root_source_packages_dp, destination_sitepackages_dp ):
+        self._target_package_dp =           target_package_dp
         self._root_source_packages_dp =     root_source_packages_dp
         self._destination_sitepackages_dp = destination_sitepackages_dp
 
@@ -146,8 +137,8 @@ class RequirementManager( object ):
 
     def gen_package_installers( self, recursive=True ):
         self._yielded = []
-        project_name = os.path.basename(os.path.dirname(self._target_setup_py_fp))
-        for package_installer in self._gen_package_installers_recursive( self._target_setup_py_fp, recursive ):
+        project_name = os.path.basename(self._target_package_dp)
+        for package_installer in self._gen_package_installers_recursive( self._target_package_dp, recursive ):
             # in case there is a cyclic dependency, refering to the original project name, skip it
             if package_installer.version_descriptor.name == project_name:
                 continue
@@ -163,8 +154,10 @@ class RequirementManager( object ):
         return result
 
 
-    def _gen_package_installers_recursive( self, setup_py_fp, recursive ):
-        require_lines = setup_py.get_dict( setup_py_fp )["install_requires"]
+    def _gen_package_installers_recursive( self, package_dp, recursive ):
+        require_lines = requirements.get_lines( package_dp )
+        if not require_lines:
+            return
 
         for package_version_descriptor in self._gen_package_version_descriptors( require_lines ):
             if package_version_descriptor.name in self._yielded:
@@ -172,21 +165,20 @@ class RequirementManager( object ):
 
             self._yielded.append( package_version_descriptor.name )
 
-            package_dp =          os.path.join(   self._root_source_packages_dp, package_version_descriptor.name )
-            package_setup_py_fp = os.path.join(   package_dp, "setup.py" )
+            sub_package_dp = os.path.join(   self._root_source_packages_dp, package_version_descriptor.name )
 
-            if os.path.exists( package_setup_py_fp ):
+            if requirements.is_linkable_package( sub_package_dp ):
                 exists = True
                 if recursive:
-                    for package_installer in self._gen_package_installers_recursive( package_setup_py_fp, recursive=recursive ):
+                    for package_installer in self._gen_package_installers_recursive( sub_package_dp, recursive=recursive ):
                         yield package_installer
             else:
                 exists = False
 
             if exists is False:
-                package_dp = None
+                sub_package_dp = None
 
-            yield PackageInstaller( package_version_descriptor, package_dp )
+            yield PackageInstaller( package_version_descriptor, sub_package_dp )
 
 
     def _gen_package_version_descriptors( self, lines ):
