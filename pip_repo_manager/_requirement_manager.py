@@ -159,7 +159,7 @@ class RequirementManager( object ):
         if not require_lines:
             return
 
-        for package_version_descriptor in self._gen_package_version_descriptors( require_lines ):
+        for package_version_descriptor in self._gen_package_version_descriptors( require_lines, package_dp ):
             if package_version_descriptor.name in self._yielded:
                 continue
 
@@ -181,14 +181,17 @@ class RequirementManager( object ):
             yield PackageInstaller( package_version_descriptor, sub_package_dp )
 
 
-    def _gen_package_version_descriptors( self, lines ):
+    def _gen_package_version_descriptors( self, lines, package_dp ):
         for line in lines:
             package_name = line
             package_comparator = None
             package_version = None
             for comparator in ("==", ">", ">=", "<", "<=", "!="):
                 if line.find(comparator) != -1:
-                    package_name, package_version = line.split(comparator)
+                    try:
+                        package_name, package_version = line.split(comparator)
+                    except ValueError as e:
+                        raise ValueError( "Can't split '{line}' into name and version using '{comparator}' [See '{package_dp}'].".format(**locals()) )
                     package_comparator = comparator
                     break
             yield PackageVersionDescriptor( package_name, package_comparator, package_version )
