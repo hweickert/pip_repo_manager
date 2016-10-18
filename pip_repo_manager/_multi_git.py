@@ -38,7 +38,8 @@ class MultiGit( object ):
         if self._include_root_git_dp:
             yield os.path.join( self._root_dp )
 
-        for n in os.listdir( root_dp ):
+        ns = sorted(os.listdir(root_dp))
+        for n in ns:
             if not os.path.isdir( root_dp+"/"+n ):
                 continue
             dp = os.path.join(root_dp, n)
