@@ -6,6 +6,7 @@ import subprocess
 
 from . _multi_git import MultiGit
 from . import _requirement_manager
+from . _git_repo_status import GitRepoStatus
 
 
 
@@ -48,6 +49,13 @@ class PipRepoManager( object ):
             subprocess.call([self._git_executable_fp, "gui"])
 
 
+    def git_status( self ):
+        git_repo_status = GitRepoStatus( self._root_directory, self._git_executable_fp )
+        git_repo_status.load()
+        self.print_repo_status_queried(git_repo_status)
+        print git_repo_status
+
+
     def multi_git_status( self ):
         mg = MultiGit( self._root_directory, self._git_executable_fp )
 
@@ -71,6 +79,7 @@ class PipRepoManager( object ):
         result = 0
         result = cmp( result, cmp(not grs_a.has_repository, not grs_b.has_repository) )
         result = cmp( result, cmp(not grs_a.has_origin, not grs_b.has_origin)         )
+        result = cmp( result, cmp(grs_a.path, grs_b.path)                             )
         return result
 
 

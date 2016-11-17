@@ -36,6 +36,9 @@ def main():
         pip_repo_manager.create_index_html()
 
     elif args.command == "git_status":
+        pip_repo_manager.git_status()
+
+    elif args.command == "git_multi_status":
         pip_repo_manager.multi_git_status()
 
     elif args.command == "git_gui":
@@ -59,6 +62,7 @@ def _get_args():
             "install_dependencies_develop",
             "install_dependencies",
             "git_status",
+            "git_multi_status",
             "git_gui",
             "git_pull_origin"
         ], default="index", type=unicode,
