@@ -113,7 +113,15 @@ class PipRepoManager( object ):
 
 
     def _should_be_git_status_listed( self, grs ):
-        return grs.contents_modified() or not grs.has_repository or not grs.has_origin or grs.nothing_committed or grs.n_commits_behind_origin != 0
+        result = \
+            grs.contents_modified() or \
+            not grs.has_repository or \
+            not grs.has_origin or \
+            grs.nothing_committed or \
+            grs.branch_non_master or \
+            grs.n_commits_behind_origin != 0
+
+        return result
 
 
     def create_wheel( self, project_name ):

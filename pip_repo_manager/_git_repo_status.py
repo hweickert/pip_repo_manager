@@ -25,6 +25,15 @@ class GitRepoStatus( list ):
 
         self.load_time = -1
 
+        self._active_branch = None
+
+    @property
+    def branch_non_master(self):
+        result = \
+            self._active_branch != "master" and \
+            self.has_repository
+        return result
+
 
     def contents_modified( self ):
         """ Means the repo does not have any modifications, additions or the like. """
@@ -38,14 +47,13 @@ class GitRepoStatus( list ):
         previous_dp = os.curdir
         os.chdir( self.path )
 
-        active_branch = self._get_active_branch()
-        if active_branch is None:
+        if self._active_branch is None:
             os.chdir( previous_dp )
             raise ValueError( "Unable to query branch for: {0}".format(self.path) )
 
         list( call_and_gen_output([unicode(self._git_executable_fp), "fetch"]) )
 
-        for line in call_and_gen_output( [unicode(self._git_executable_fp), "log", "HEAD..origin/{0}".format(active_branch), "--oneline"] ):
+        for line in call_and_gen_output( [unicode(self._git_executable_fp), "log", "HEAD..origin/{0}".format(self._active_branch), "--oneline"] ):
             if not line.strip():
                 continue
             if self._rex_log_commit_oneline.match(line) is None:
@@ -54,7 +62,7 @@ class GitRepoStatus( list ):
 
         if result == 0:
             # possibly we are ahead in the number of commits, subtract from result
-            for line in call_and_gen_output( [unicode(self._git_executable_fp), "log", "origin/{0}..HEAD".format(active_branch), "--oneline"] ):
+            for line in call_and_gen_output( [unicode(self._git_executable_fp), "log", "origin/{0}..HEAD".format(self._active_branch), "--oneline"] ):
                 if not line.strip():
                     continue
                 if self._rex_log_commit_oneline.match(line) is None:
@@ -106,13 +114,14 @@ class GitRepoStatus( list ):
             file_status, file_path = parts[0], parts[1]
             self.append( (file_status, file_path) )
 
+        self._active_branch = self._get_active_branch()
+
         if "origin" in call_and_gen_output( [self._git_executable_fp, "remote"] ):
             self.has_origin = True
             self.n_commits_behind_origin = self._get_how_many_commits_behind_origin()
 
         if "fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree." in call_and_gen_output( [self._git_executable_fp, "rev-list", "HEAD", "--count"], "stderr" ):
             self.nothing_committed = True
-
 
         os.chdir( previous_dp )
 
@@ -159,6 +168,8 @@ class GitRepoStatus( list ):
             result += [_wrap_in_color("red", "CommitsBehindOrigin:{0}".format(self.n_commits_behind_origin))]
         if self.n_commits_behind_origin < 0:
             result += [_wrap_in_color("red", "CommitsAheadOrigin:{0}".format(abs(self.n_commits_behind_origin)))]
+        if self.branch_non_master:
+            result += [_wrap_in_color("green", "{0}".format(self._active_branch))]
 
         return result
 
