@@ -17,7 +17,7 @@ def install_project_dependencies( project_dp, root_source_packages_dp=None, as_l
     root_source_packages_dp =     root_source_packages_dp
 
     if destination_sitepackages_dp is None:
-        destination_sitepackages_dp = _get_destination_sitepackages_dp( project_dp, environment )
+        destination_sitepackages_dp = _get_destination_sitepackages_dp(project_dp, environment)
 
     install( project_dp, root_source_packages_dp, destination_sitepackages_dp, as_link=as_link )
 
@@ -48,7 +48,7 @@ def _gen_package_installers( project_dp, root_source_packages_dp, destination_si
         yield package_installer
 
 
-def _get_destination_sitepackages_dp( project_dp, environment ):
+def _get_destination_sitepackages_dp(project_dp, environment):
     venv_destination_sitepackages_dp = project_dp + "/venv/Lib/site-packages"
     env_destination_sitepackages_dp =  project_dp + "/env/Lib/site-packages"
 
@@ -56,14 +56,13 @@ def _get_destination_sitepackages_dp( project_dp, environment ):
         result = "{0}/{1}/Lib/site-packages".format(project_dp, environment)
         if not os.path.exists(result):
             raise ValueError( "Unable to find environment directory: \n  {0}".format(result) )
-        return result
-
-    if os.path.exists(venv_destination_sitepackages_dp):
-        result = venv_destination_sitepackages_dp
-    elif os.path.exists(env_destination_sitepackages_dp):
-        result = env_destination_sitepackages_dp
     else:
-        raise ValueError( "Unable to find existing venv/env directory: \n  {0}\n  {1}".format(venv_destination_sitepackages_dp, env_destination_sitepackages_dp) )
+        if os.path.exists(venv_destination_sitepackages_dp):
+            result = venv_destination_sitepackages_dp
+        elif os.path.exists(env_destination_sitepackages_dp):
+            result = env_destination_sitepackages_dp
+        else:
+            raise ValueError( "Unable to find existing venv/env directory: \n  {0}\n  {1}".format(venv_destination_sitepackages_dp, env_destination_sitepackages_dp) )
 
     return result
 
@@ -102,11 +101,10 @@ class RequirementManager( object ):
         create_pth_link( self._destination_sitepackages_dp, name, target_repository_dp )
 
 
-    def _get_existing_pip_executable_fp( self ):
+    def _get_existing_pip_executable_fp(self):
         result = self._get_pip_executable_fp()
-        if not os.path.exists( result ):
-            # ok, pip wasn't found but maybe it is on the PATH variable
-            result = "pip"
+        if not os.path.exists(result):
+            raise ValueError("The 'pip' executable was not found [{0}].".format(result))
         return result
 
 
@@ -132,7 +130,8 @@ class RequirementManager( object ):
 
 
     def _install_foreign_package( self ):
-        subprocess.call( [self._pip_executable_fp, "install", self._package_installer.version_descriptor.as_string(), "--target", self._destination_sitepackages_dp] )
+        command = [self._pip_executable_fp, "install", self._package_installer.version_descriptor.as_string(), "--target", self._destination_sitepackages_dp]
+        subprocess.call(command)
 
 
     def gen_package_installers( self, recursive=True ):

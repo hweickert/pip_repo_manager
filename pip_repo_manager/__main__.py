@@ -19,7 +19,7 @@ def main():
     elif args.command == "install_dependencies":
         if args.project_path is None:
             raise ValueError( "'--project_path' must be set when using the 'install_dependencies' command." )
-        pip_repo_manager.install_dependencies( args.project_path, args.root_directory, target_dp=args.target_path )
+        pip_repo_manager.install_dependencies(args.project_path, args.root_directory, environment=args.environment, target_dp=args.target_path)
         if args.include_project:
             name = os.path.basename(args.project_path)
             _requirement_manager.create_pth_link( args.target_path, name, args.project_path )
@@ -27,7 +27,7 @@ def main():
     elif args.command == "install_dependencies_develop":
         if args.project_path is None:
             raise ValueError( "'--project_path' must be set when using the 'install_dependencies_develop' command." )
-        pip_repo_manager.install_dependencies_develop( args.project_path, args.root_directory, target_dp=args.target_path )
+        pip_repo_manager.install_dependencies_develop(args.project_path, args.root_directory, environment=args.environment, target_dp=args.target_path)
         if args.include_project:
             name = os.path.basename(args.project_path)
             _requirement_manager.create_pth_link( args.target_path, name, args.project_path )
@@ -84,6 +84,11 @@ def _get_args():
     parser.add_argument(
         "--target_path", default=None, type=_absolute_path,
         help="The target installation directory (e.g. 'site-packages') to install the python package and its' dependencies into. Used in conjunction with 'install_dependencies'/'install_dependencies_develop'."
+    )
+
+    parser.add_argument(
+        "--env", dest="environment", default=None,
+        help="The target environment directory (e.g. 'env' or 'venv') to install the python package and its' dependencies into. Used in conjunction with 'install_dependencies'/'install_dependencies_develop'."
     )
 
     parser.add_argument(

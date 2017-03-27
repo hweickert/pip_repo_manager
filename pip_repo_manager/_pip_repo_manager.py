@@ -29,11 +29,11 @@ class PipRepoManager( object ):
             yield dependency
 
 
-    def install_dependencies( self, project_dp, root_source_packages_dp, environment=None, target_dp=None ):
+    def install_dependencies(self, project_dp, root_source_packages_dp, environment=None, target_dp=None):
         _requirement_manager.install_project_dependencies( project_dp, root_source_packages_dp=root_source_packages_dp, as_link=False, environment=environment, destination_sitepackages_dp=target_dp )
 
 
-    def install_dependencies_develop( self, project_dp, root_source_packages_dp, environment=None, target_dp=None ):
+    def install_dependencies_develop(self, project_dp, root_source_packages_dp, environment=None, target_dp=None):
         _requirement_manager.install_project_dependencies( project_dp, root_source_packages_dp=root_source_packages_dp, as_link=True, environment=environment, destination_sitepackages_dp=target_dp )
 
 
