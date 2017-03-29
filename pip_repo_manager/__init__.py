@@ -1,4 +1,4 @@
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 from . _pip_repo_manager import PipRepoManager
 from . _git_repo_status import GitRepoStatus

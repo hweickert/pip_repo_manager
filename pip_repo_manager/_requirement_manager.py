@@ -23,13 +23,27 @@ def install_project_dependencies( project_dp, root_source_packages_dp=None, as_l
 
 
 def gen_dependencies( project_dp, root_source_packages_dp, recursive=True ):
-    for package_installer in _gen_package_installers( project_dp, root_source_packages_dp, destination_sitepackages_dp="dummy", recursive=recursive ):
+    for package_installer in _gen_package_installers(project_dp, root_source_packages_dp, destination_sitepackages_dp="dummy", recursive=recursive):
         yield (package_installer.version_descriptor, package_installer.path)
 
 
-def install( project_dp, root_source_packages_dp, destination_sitepackages_dp, as_link=True ):
-    requirement_manager = RequirementManager( project_dp, root_source_packages_dp, destination_sitepackages_dp )
-    for package_installer in _gen_package_installers( project_dp, root_source_packages_dp, destination_sitepackages_dp, recursive=True ):
+def install(project_dp, root_source_packages_dp, destination_sitepackages_dp, as_link=True):
+    requirement_manager = RequirementManager(project_dp, root_source_packages_dp, destination_sitepackages_dp)
+
+    message = "Collecting dependencies ..."
+    print("-"*len(message))
+    print(message)
+    print("-"*len(message))
+
+    installed_vds =            list(requirement_manager.gen_installed_vds())
+    new_package_installers =   list(_gen_package_installers(project_dp, root_source_packages_dp, destination_sitepackages_dp, recursive=True, exclude_vds=installed_vds))
+
+    message = "Installing{0} {1} new packages [{2} already installed] ...".format("/Linking" if as_link else "", len(new_package_installers), len(installed_vds))
+    print("-"*len(message))
+    print(message)
+    print("-"*len(message))
+
+    for package_installer in new_package_installers:
         requirement_manager.install_package( package_installer, as_link )
 
 
@@ -40,11 +54,11 @@ def create_pth_link( destination_sitepackages_dp, name, target_repository_dp ):
     print "Written: {pth_fp}".format(**locals())
 
 
-def _gen_package_installers( project_dp, root_source_packages_dp, destination_sitepackages_dp, recursive=True ):
+def _gen_package_installers(project_dp, root_source_packages_dp, destination_sitepackages_dp, recursive=True, exclude_vds=[]):
     project_dn = os.path.basename( project_dp )
 
     requirement_manager = RequirementManager(project_dp, root_source_packages_dp, destination_sitepackages_dp)
-    for package_installer in requirement_manager.gen_package_installers( recursive=recursive ):
+    for package_installer in requirement_manager.gen_package_installers(recursive, exclude_vds):
         yield package_installer
 
 
@@ -134,10 +148,26 @@ class RequirementManager( object ):
         subprocess.call(command)
 
 
-    def gen_package_installers( self, recursive=True ):
+    def gen_installed_vds(self):
+        self._pip_executable_fp = self._get_existing_pip_executable_fp()
+
+        command_line = [self._pip_executable_fp, "freeze"]
+        stdout, stderr = subprocess.Popen([self._pip_executable_fp, "freeze"], stdout=subprocess.PIPE).communicate()
+        require_lines = [l for l in stdout.split("\r\n") if l]
+        g_version_descriptors = self._gen_package_version_descriptors(require_lines, self._root_source_packages_dp)
+
+        # 'pip freeze' won't collect/display pth-links.
+        # But this is ok, they are so cheap that we can always overwrite them.
+
+        for version_descriptor in g_version_descriptors:
+            yield version_descriptor
+
+
+    def gen_package_installers(self, recursive=True, exclude_vds=[]):
         self._yielded = []
         project_name = os.path.basename(self._target_package_dp)
-        for package_installer in self._gen_package_installers_recursive( self._target_package_dp, recursive ):
+
+        for package_installer in self._gen_package_installers_recursive(self._target_package_dp, recursive, exclude_vds):
             # in case there is a cyclic dependency, refering to the original project name, skip it
             if package_installer.version_descriptor.name == project_name:
                 continue
@@ -153,23 +183,25 @@ class RequirementManager( object ):
         return result
 
 
-    def _gen_package_installers_recursive( self, package_dp, recursive ):
-        require_lines = requirements.get_lines( package_dp )
+    def _gen_package_installers_recursive(self, package_dp, recursive, exclude_vds):
+        require_lines = requirements.get_lines(package_dp)
         if not require_lines:
             return
 
-        for package_version_descriptor in self._gen_package_version_descriptors( require_lines, package_dp ):
+        for package_version_descriptor in self._gen_package_version_descriptors(require_lines, package_dp):
+            if package_version_descriptor in exclude_vds:
+                continue
             if package_version_descriptor.name in self._yielded:
                 continue
 
             self._yielded.append( package_version_descriptor.name )
 
-            sub_package_dp = os.path.join(   self._root_source_packages_dp, package_version_descriptor.name )
+            sub_package_dp = self._root_source_packages_dp+"/"+package_version_descriptor.name
 
-            if requirements.is_linkable_package( sub_package_dp ):
+            if requirements.is_linkable_package(sub_package_dp):
                 exists = True
                 if recursive:
-                    for package_installer in self._gen_package_installers_recursive( sub_package_dp, recursive=recursive ):
+                    for package_installer in self._gen_package_installers_recursive(sub_package_dp, recursive, exclude_vds):
                         yield package_installer
             else:
                 exists = False
@@ -180,7 +212,7 @@ class RequirementManager( object ):
             yield PackageInstaller( package_version_descriptor, sub_package_dp )
 
 
-    def _gen_package_version_descriptors( self, lines, package_dp ):
+    def _gen_package_version_descriptors(self, lines, package_dp):
         for line in lines:
             package_name = line
             package_comparator = None
